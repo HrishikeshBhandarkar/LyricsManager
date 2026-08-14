@@ -12,6 +12,7 @@ build/
 develop-eggs/
 dist/
 Test/Samples/
+tmpdir/
 downloads/
 eggs/
 .eggs/

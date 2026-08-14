@@ -40,6 +40,7 @@ except ImportError:
 
 from Lyrics_manager.fetcher import (
     api_providers, 
+    get_ordered_providers,
     format_to_reference_elrc, 
     is_truly_enhanced,
     _run_ai_fallback_queue
@@ -113,7 +114,7 @@ def perform_api_fetch(title: str, artist: str, format_req: str, out_dir: Path, t
         nonlocal best_found_format, final_lyrics, final_ext, found_provider
         
         valid_providers = []
-        for name, filename, fn in api_providers:
+        for name, filename, fn in get_ordered_providers():
             if target_provider and name.lower() != target_provider.lower():
                 continue
             if name in blacklist:
@@ -273,6 +274,9 @@ def interactive_ai():
         })
         
     if queue:
+        from Lyrics_manager.dependencies import prompt_ai_setup_consent
+        if not prompt_ai_setup_consent():
+            return
         _run_ai_fallback_queue(queue, format_req, save_choice=save_choice)
 
 def interactive_scan():
@@ -712,6 +716,10 @@ def main(ctx, help):
         print_cli_help()
         sys.exit(0)
         
+    from Lyrics_manager.dependencies import check_core_dependencies
+    if not check_core_dependencies():
+        sys.exit(1)
+        
     if ctx.invoked_subcommand is None:
         run_interactive_shell()
 
@@ -744,6 +752,11 @@ def ai(audio, transcript, format_req, help):
     if help:
         print_ai_help()
         sys.exit(0)
+        
+    from Lyrics_manager.dependencies import prompt_ai_setup_consent
+    if not prompt_ai_setup_consent():
+        sys.exit(1)
+        
     if not audio:
         audio = Prompt.ask("[bold color(208)]Enter path to audio file[/bold color(208)]")
     console.print("[bold color(208)]LYRIC MANAGER[/bold color(208)] - AI Mode")

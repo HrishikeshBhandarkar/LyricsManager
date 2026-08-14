@@ -352,15 +352,46 @@ def main():
         print("Invalid choice.")
 
 
-api_providers = [
-    ("BiniLyrics (Apple Music)", "output_binilyrics.elrc", lambda t: biniLy(t, "enhanced")),
-    ("KuGou", "output_kugou.elrc", lambda t: kugou_provider(t, "enhanced")),
-    ("NetEase", "output_netease.elrc", lambda t: netease_provider(t, "enhanced")),
-    ("QQ Music", "output_qqmusic.elrc", lambda t: qqmusic_provider(t, "enhanced")),
-    ("Musixmatch", "output_musixmatch.elrc", lambda t: musixmatch_provider(t, "enhanced")),
-    ("Paxsenix", "output_paxsenix.elrc", lambda t: paxsenix(t)),
-    ("LRCLIB", "output_lrclib.lrc", lambda t: lrclib(t)),
-]
+PROVIDER_REGISTRY = {
+    "bini": ("BiniLyrics (Apple Music)", "output_binilyrics.elrc", lambda t: biniLy(t, "enhanced")),
+    "kugou": ("KuGou", "output_kugou.elrc", lambda t: kugou_provider(t, "enhanced")),
+    "netease": ("NetEase", "output_netease.elrc", lambda t: netease_provider(t, "enhanced")),
+    "qq": ("QQ Music", "output_qqmusic.elrc", lambda t: qqmusic_provider(t, "enhanced")),
+    "mxm": ("Musixmatch", "output_musixmatch.elrc", lambda t: musixmatch_provider(t, "enhanced")),
+    "pax": ("Paxsenix", "output_paxsenix.elrc", lambda t: paxsenix(t)),
+    "lrc": ("LRCLIB", "output_lrclib.lrc", lambda t: lrclib(t)),
+}
+
+DEFAULT_PROVIDER_ORDER = ["bini", "kugou", "netease", "qq", "mxm", "pax", "lrc"]
+
+def get_ordered_providers(custom_order: list[str] = None) -> list[tuple]:
+    """
+    Returns the ordered list of provider tuples based on user custom configuration or default fallback chain.
+    """
+    if not custom_order:
+        try:
+            import Lyrics_manager.config as cfg
+            custom_order = cfg.get_provider_order()
+        except Exception:
+            custom_order = DEFAULT_PROVIDER_ORDER
+
+    ordered = []
+    seen = set()
+    for alias in custom_order:
+        alias_clean = alias.strip().lower()
+        if alias_clean in PROVIDER_REGISTRY and alias_clean not in seen:
+            ordered.append(PROVIDER_REGISTRY[alias_clean])
+            seen.add(alias_clean)
+            
+    # Add any remaining providers not explicitly listed in custom chain
+    for alias in DEFAULT_PROVIDER_ORDER:
+        if alias not in seen and alias in PROVIDER_REGISTRY:
+            ordered.append(PROVIDER_REGISTRY[alias])
+            seen.add(alias)
+            
+    return ordered
+
+api_providers = get_ordered_providers()
 
 def _run_api_fetcher():
     default_title = "São Paulo"
@@ -383,7 +414,7 @@ def _run_api_fetcher():
 
     print(f"\nProcessing queue of {len(song_queue)} song(s)...\n")
 
-    test_dir = Path(__file__).resolve().parent.parent.parent / "Test"
+    test_dir = Path.cwd()
     test_dir.mkdir(parents=True, exist_ok=True)
 
     for track in song_queue:
