@@ -217,3 +217,23 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# ==========================================
+# LyricsManager Custom Ignore Rules
+# ==========================================
+
+# Raw API responses & test outputs
+Test/Response_API/
+Response_API/
+output/
+
+# Downloaded & generated lyric files
+*.ttml
+*.elrc
+*.lrc
+*.txt
+
+# Local audio test files
+*.mp3
+*.flac
+*.m4a
+*.wav

@@ -45,6 +45,7 @@ def fetch_bini(title: str, artist: str):
         print()
         if data != None:
             results = data.get("results", [])
+            print(results)
             if results:
                 for o in results:
                     if o.get("timing_type") == "word":
