@@ -9,19 +9,6 @@ if sys.platform == 'win32':
     except AttributeError:
         pass
 
-# Fix SpeechBrain / Lightning / Pyannote k2 lazy import bug
-try:
-    from speechbrain.utils.importutils import LazyModule
-    _orig_sb_getattr = LazyModule.__getattr__
-    def _safe_sb_getattr(self, attr):
-        try:
-            return _orig_sb_getattr(self, attr)
-        except Exception as e:
-            raise AttributeError(attr) from e
-    LazyModule.__getattr__ = _safe_sb_getattr
-except ImportError:
-    pass
-
 import click
 from rich.console import Console
 from rich.panel import Panel
@@ -48,6 +35,12 @@ from Lyrics_manager.fetcher import (
 import Lyrics_manager.config as cfg
 
 console = Console()
+
+def clean_path_str(p_str: str) -> str:
+    """Strips surrounding double quotes, single quotes, backticks, and whitespace from user-entered paths."""
+    if not p_str:
+        return ""
+    return p_str.strip().strip('"').strip("'").strip('`').strip()
 
 def print_logo():
     text = Text()
@@ -197,7 +190,34 @@ def perform_api_fetch(title: str, artist: str, format_req: str, out_dir: Path, t
             else:
                 if not progress_ctx: console.print(f"  └── [bold yellow]Could not embed: No audio file path provided.[/bold yellow]")
     else:
-        if not progress_ctx: console.print(f"  └── [bold red]No lyrics found.[/bold red]")
+        if not progress_ctx: 
+            console.print(f"  └── [bold red]No lyrics found on Web APIs.[/bold red]")
+
+    desired_fulfilled = bool(final_lyrics and (format_req == "line" or best_found_format == "word"))
+    if not desired_fulfilled and not progress_ctx:
+        missing_msg = "word-by-word synced" if format_req == "word" else "synchronized"
+        console.print(f"\n[bold yellow]Could not find {missing_msg} lyrics from online APIs for '{title}'.[/bold yellow]")
+        run_ai_prompt = Prompt.ask("[bold color(208)]Would you like to transcribe and align this song using Local AI? (y/n)[/bold color(208)]", default="n").strip().lower()
+        if run_ai_prompt in ["y", "yes"]:
+            audio_path = track_data.get("path")
+            if not audio_path or not Path(audio_path).exists():
+                audio_input = Prompt.ask("[bold color(208)]Enter path to audio file for AI alignment[/bold color(208)]").strip()
+                if audio_input and Path(audio_input).exists():
+                    audio_path = Path(audio_input)
+            
+            if audio_path and Path(audio_path).exists():
+                from Lyrics_manager.dependencies import prompt_ai_setup_consent
+                if prompt_ai_setup_consent():
+                    ai_queue = [{
+                        "title": title,
+                        "artist": artist,
+                        "path": str(audio_path),
+                        "transcript": ""
+                    }]
+                    _run_ai_fallback_queue(ai_queue, format_req, save_choice=save_choice)
+                    return "AI Forced Alignment"
+            else:
+                console.print("[bold red]No valid audio file provided for AI alignment.[/bold red]")
 
     return found_provider
 
@@ -223,7 +243,7 @@ def interactive_ai():
     from Lyrics_manager.data4api import get_params
     
     console.print("\n[bold white]--- AI FORCED ALIGNMENT (DIRECTORY SCAN) ---[/bold white]")
-    directory = Prompt.ask("[bold color(208)]Enter folder path to scan for audio files[/bold color(208)]", default=str(Path.cwd()))
+    directory = clean_path_str(Prompt.ask("[bold color(208)]Enter folder path to scan for audio files[/bold color(208)]", default=str(Path.cwd())))
     
     found = scan(directory)
     if not found:
@@ -263,14 +283,63 @@ def interactive_ai():
     console.print("  [3] Both")
     save_choice = Prompt.ask("[bold color(208)]Select option[/bold color(208)]", default="3")
     
+    custom_single_transcript = ""
+    t_mode = "1"
+    txt_folder = None
+
+    if len(parsed) == 1:
+        single_path = Path(list(parsed.values())[0]["path"])
+        auto_txt = single_path.with_suffix(".txt")
+        default_txt = str(auto_txt) if auto_txt.exists() else ""
+        console.print("\n[bold white]Lyrics Transcript (.txt)[/bold white]")
+        console.print("[grey70]Provide a plain text lyrics file for guided forced alignment, or leave blank to auto-fetch from LRCLIB.[/grey70]")
+        raw_user_txt = Prompt.ask("[bold color(208)]Transcript .txt path (Optional)[/bold color(208)]", default=default_txt)
+        user_txt = clean_path_str(raw_user_txt)
+        if user_txt and Path(user_txt).is_file():
+            try:
+                custom_single_transcript = Path(user_txt).read_text(encoding="utf-8")
+                console.print(f"[bold green]✔ Loaded custom transcript from: {user_txt}[/bold green]")
+            except Exception as e:
+                console.print(f"[bold red]Failed to read transcript file: {e}[/bold red]")
+        elif user_txt:
+            console.print(f"[bold yellow]Transcript file not found at: '{user_txt}'. Will auto-fetch from LRCLIB.[/bold yellow]")
+    else:
+        console.print("\n[bold white]Lyrics Transcript (.txt) Options[/bold white]")
+        console.print("  [1] Auto-fetch lyrics from LRCLIB (Default)")
+        console.print("  [2] Auto-detect matching .txt files in the audio folder (e.g. Song.txt next to Song.mp3)")
+        console.print("  [3] Specify a folder containing transcript .txt files")
+        t_mode = Prompt.ask("[bold color(208)]Select transcript option[/bold color(208)]", default="1")
+        if t_mode == "3":
+            raw_folder_input = Prompt.ask("[bold color(208)]Enter folder path containing .txt files[/bold color(208)]")
+            t_folder_input = clean_path_str(raw_folder_input)
+            if t_folder_input and Path(t_folder_input).is_dir():
+                txt_folder = Path(t_folder_input)
+            else:
+                console.print("[bold yellow]Invalid folder path. Falling back to LRCLIB auto-fetch.[/bold yellow]")
+
     queue = []
     for idx, track_data in parsed.items():
-        title = track_data.get("title", track_data["path"].stem)
+        track_path = Path(track_data["path"])
+        title = track_data.get("title", track_path.stem)
         artist = track_data.get("artist", "Unknown")
+        t_text = ""
+
+        if len(parsed) == 1 and custom_single_transcript:
+            t_text = custom_single_transcript
+        elif t_mode == "2":
+            cand_txt = track_path.with_suffix(".txt")
+            if cand_txt.exists():
+                t_text = cand_txt.read_text(encoding="utf-8", errors="ignore")
+        elif t_mode == "3" and txt_folder:
+            cand_txt = txt_folder / f"{track_path.stem}.txt"
+            if cand_txt.exists():
+                t_text = cand_txt.read_text(encoding="utf-8", errors="ignore")
+
         queue.append({
             "title": title,
             "artist": artist,
-            "path": track_data["path"]
+            "path": track_path,
+            "transcript": t_text
         })
         
     if queue:
@@ -316,12 +385,7 @@ def interactive_scan():
     if failed:
         console.print(f"[bold yellow]Failed to read metadata for {len(failed)} files.[/bold yellow]")
         
-    console.print("\n[bold white]What would you like to do with these tracks?[/bold white]")
-    console.print("  [1] Fetch lyrics from Web APIs")
-    console.print("  [2] Run AI Forced Aligner directly")
-    action = Prompt.ask("[bold color(208)]Select action[/bold color(208)]", default="1")
-    
-    fmt_choice = Prompt.ask("[bold white]Desired format?[/bold white] [1] Line-by-Line [2] Word-by-Word", default="2")
+    fmt_choice = Prompt.ask("\n[bold white]Desired format?[/bold white] [1] Line-by-Line [2] Word-by-Word", default="2")
     format_req = "line" if fmt_choice == "1" else "word"
     
     console.print("\n[bold white]How would you like to save the lyrics?[/bold white]")
@@ -330,95 +394,100 @@ def interactive_scan():
     console.print("  [3] Both")
     save_choice = Prompt.ask("[bold color(208)]Select option[/bold color(208)]", default="3")
     
-    # Process
-    if action == "1":
-        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
-        
-        # Track results for the review phase
-        results_map = {}
-        blacklist_map = {idx: [] for idx in parsed.keys()}
-        
-        def run_batch_fetch():
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[bold white]{task.description}"),
-                BarColumn(bar_width=50, complete_style="green", finished_style="green"),
-                TaskProgressColumn(),
-                console=console,
-                transient=False
-            ) as master_progress:
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+    
+    original_parsed = dict(parsed)
+    results_map = {}
+    blacklist_map = {idx: [] for idx in parsed.keys()}
+    
+    def run_batch_fetch():
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[bold white]{task.description}"),
+            BarColumn(bar_width=50, complete_style="green", finished_style="green"),
+            TaskProgressColumn(),
+            console=console,
+            transient=False
+        ) as master_progress:
+            
+            master_task_id = master_progress.add_task("Mass Processing Songs...", total=len(parsed))
+            
+            for idx, track_data in parsed.items():
+                title = track_data.get("title", track_data["path"].stem)
+                artist = track_data.get("artist", "Unknown")
+                out_dir = track_data["path"].parent
                 
-                master_task_id = master_progress.add_task("Mass Processing Songs...", total=len(parsed))
+                master_progress.update(master_task_id, description=f"Processing {title} by {artist}...")
                 
-                for idx, track_data in parsed.items():
-                    title = track_data.get("title", track_data["path"].stem)
-                    artist = track_data.get("artist", "Unknown")
-                    out_dir = track_data["path"].parent
-                    
-                    master_progress.update(master_task_id, description=f"Processing {title} by {artist}...")
-                    
-                    full_track = {"title": title, "artist": artist, "path": track_data["path"]}
-                    provider = perform_api_fetch(
-                        title, artist, format_req, out_dir, 
-                        track_data=full_track, save_choice=save_choice, 
-                        progress_ctx=master_progress,
-                        blacklist=blacklist_map[idx]
-                    )
-                    
-                    results_map[idx] = provider or "Failed"
-                    if provider:
-                        blacklist_map[idx].append(provider)
-                    
-                    master_progress.advance(master_task_id)
-                    
-                master_progress.update(master_task_id, description="[bold green]All songs processed![/bold green]")
+                full_track = {"title": title, "artist": artist, "path": track_data["path"]}
+                provider = perform_api_fetch(
+                    title, artist, format_req, out_dir, 
+                    track_data=full_track, save_choice=save_choice, 
+                    progress_ctx=master_progress,
+                    blacklist=blacklist_map[idx]
+                )
+                
+                results_map[idx] = provider or "Failed"
+                if provider:
+                    blacklist_map[idx].append(provider)
+                
+                master_progress.advance(master_task_id)
+                
+            master_progress.update(master_task_id, description="[bold green]All songs processed![/bold green]")
+    
+    # First run
+    run_batch_fetch()
+    
+    # Review Loop
+    while True:
+        console.print("\n[bold color(208)]--- BATCH RESULTS ---[/bold color(208)]")
+        res_table = Table(show_header=True, header_style="color(208) bold")
+        res_table.add_column("ID", style="color(208)")
+        res_table.add_column("Song", style="white")
+        res_table.add_column("Result", style="green")
         
-        # First run
+        for idx, provider in results_map.items():
+            track_name = original_parsed[idx].get("title", original_parsed[idx]["path"].stem)
+            status_color = "red" if provider == "Failed" else "green"
+            res_table.add_row(str(idx), track_name, f"[{status_color}]{provider}[/{status_color}]")
+        console.print(res_table)
+        
+        review_str = Prompt.ask("[bold white]Are you not satisfied by any? (Enter IDs space-separated to re-fetch, or 0 if satisfied)[/bold white]", default="0")
+        if review_str.strip() == "0":
+            break
+            
+        try:
+            review_ids = [int(x) for x in review_str.split()]
+        except ValueError:
+            console.print("[bold red]Invalid selection![/bold red]")
+            continue
+            
+        # Filter parsed to only the ones they want to refetch
+        parsed = {idx: original_parsed[idx] for idx in review_ids if idx in original_parsed}
+        if not parsed:
+            break
+            
+        console.print(f"\n[bold yellow]Re-fetching {len(parsed)} songs (excluding previous providers)...[/bold yellow]")
         run_batch_fetch()
-        
-        # Review Loop
-        while True:
-            console.print("\n[bold color(208)]--- BATCH RESULTS ---[/bold color(208)]")
-            res_table = Table(show_header=True, header_style="color(208) bold")
-            res_table.add_column("ID", style="color(208)")
-            res_table.add_column("Song", style="white")
-            res_table.add_column("Result", style="green")
-            
-            for idx, provider in results_map.items():
-                track_name = parsed[idx].get("title", parsed[idx]["path"].stem)
-                status_color = "red" if provider == "Failed" else "green"
-                res_table.add_row(str(idx), track_name, f"[{status_color}]{provider}[/{status_color}]")
-            console.print(res_table)
-            
-            review_str = Prompt.ask("[bold white]Are you not satisfied by any? (Enter IDs space-separated to re-fetch, or 0 if satisfied)[/bold white]", default="0")
-            if review_str.strip() == "0":
-                break
-                
-            try:
-                review_ids = [int(x) for x in review_str.split()]
-            except ValueError:
-                console.print("[bold red]Invalid selection![/bold red]")
-                continue
-                
-            # Filter parsed to only the ones they want to refetch
-            parsed = {idx: parsed[idx] for idx in review_ids if idx in parsed}
-            if not parsed:
-                break
-                
-            console.print(f"\n[bold yellow]Re-fetching {len(parsed)} songs (excluding previous providers)...[/bold yellow]")
-            run_batch_fetch()
-            
-    elif action == "2":
-        queue = []
-        for idx, track_data in parsed.items():
-            title = track_data.get("title", track_data["path"].stem)
-            artist = track_data.get("artist", "Unknown")
-            queue.append({
-                "title": title,
-                "artist": artist,
-                "path": str(track_data["path"])
-            })
-        _run_ai_fallback_queue(queue, format_req, save_choice=save_choice)
+
+    # Offer AI fallback ONLY if there are songs that could not be found on Web APIs
+    failed_indices = [idx for idx, provider in results_map.items() if provider == "Failed"]
+    if failed_indices:
+        console.print(f"\n[bold yellow]{len(failed_indices)} song(s) could not be found on Web APIs.[/bold yellow]")
+        ai_choice = Prompt.ask("[bold color(208)]Would you like to transcribe and align the failed song(s) using Local AI? (y/n)[/bold color(208)]", default="n").strip().lower()
+        if ai_choice in ["y", "yes"]:
+            from Lyrics_manager.dependencies import prompt_ai_setup_consent
+            if prompt_ai_setup_consent():
+                ai_queue = []
+                for f_idx in failed_indices:
+                    t_data = original_parsed[f_idx]
+                    ai_queue.append({
+                        "title": t_data.get("title", t_data["path"].stem),
+                        "artist": t_data.get("artist", "Unknown"),
+                        "path": str(t_data["path"]),
+                        "transcript": ""
+                    })
+                _run_ai_fallback_queue(ai_queue, format_req, save_choice=save_choice)
 
 class CommandAutoSuggest:
     """Provides inline grey text auto-suggestions based on commands list"""
@@ -758,16 +827,39 @@ def ai(audio, transcript, format_req, help):
         sys.exit(1)
         
     if not audio:
-        audio = Prompt.ask("[bold color(208)]Enter path to audio file[/bold color(208)]")
+        raw_audio = Prompt.ask("[bold color(208)]Enter path to audio file[/bold color(208)]")
+        audio = clean_path_str(raw_audio)
+    else:
+        audio = clean_path_str(str(audio))
+        
     console.print("[bold color(208)]LYRIC MANAGER[/bold color(208)] - AI Mode")
     format_internal = "word" if format_req.upper() == "ELRC" else "line"
     
     title = Prompt.ask("[bold color(208)]Enter Title[/bold color(208)]", default=Path(audio).stem if audio else "Unknown")
     artist = Prompt.ask("[bold color(208)]Enter Artist[/bold color(208)]", default="Unknown")
     
+    if not transcript and audio:
+        auto_txt = Path(audio).with_suffix(".txt")
+        default_txt = str(auto_txt) if auto_txt.exists() else ""
+        console.print("\n[bold white]Lyrics Transcript (.txt)[/bold white]")
+        console.print("[grey70]Provide a plain text lyrics file for guided forced alignment, or leave blank to auto-fetch from LRCLIB.[/grey70]")
+        raw_user_txt = Prompt.ask("[bold color(208)]Transcript .txt path (Optional)[/bold color(208)]", default=default_txt)
+        user_txt = clean_path_str(raw_user_txt)
+        if user_txt:
+            transcript = user_txt
+    elif transcript:
+        transcript = clean_path_str(str(transcript))
+
     t_text = ""
     if transcript:
-        t_text = Path(transcript).read_text(encoding="utf-8")
+        if Path(transcript).is_file():
+            try:
+                t_text = Path(transcript).read_text(encoding="utf-8", errors="ignore")
+                console.print(f"[bold green]✔ Loaded custom transcript from: {transcript}[/bold green]")
+            except Exception as e:
+                console.print(f"[bold red]Failed to read transcript file: {e}[/bold red]")
+        else:
+            console.print(f"[bold yellow]Transcript file not found at: '{transcript}'. Will auto-fetch from LRCLIB.[/bold yellow]")
         
     console.print("\n[bold white]How would you like to save the lyrics?[/bold white]")
     console.print("  [1] Embed into Audio File")

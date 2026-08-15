@@ -33,19 +33,6 @@ import logging
 for log_name in ["whisperx", "pyannote", "lightning", "speechbrain", "torch", "urllib3", "demucs", "transformers"]:
     logging.getLogger(log_name).setLevel(logging.ERROR)
 
-# Fix SpeechBrain / Lightning / Pyannote k2 lazy import bug
-try:
-    from speechbrain.utils.importutils import LazyModule
-    _orig_sb_getattr = LazyModule.__getattr__
-    def _safe_sb_getattr(self, attr):
-        try:
-            return _orig_sb_getattr(self, attr)
-        except Exception as e:
-            raise AttributeError(attr) from e
-    LazyModule.__getattr__ = _safe_sb_getattr
-except ImportError:
-    pass
-
 import torch
 import numpy as np
 import whisperx
@@ -531,6 +518,15 @@ def align_lyrics(
         print(f"  Model  : WhisperX {model_size}")
         print(f"  File   : {source.name}")
 
+    # If transcript_text is a file path, read its contents
+    if transcript_text and isinstance(transcript_text, (str, Path)):
+        try:
+            p = Path(str(transcript_text).strip().strip('"').strip("'"))
+            if p.is_file():
+                transcript_text = p.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            pass
+
     if not transcript_text:
         report(1, "Fetching Plain Lyrics via LRCLIB", "Querying open lyrics database...")
         try:
@@ -542,9 +538,7 @@ def align_lyrics(
             
             fetched_text = lrclib({"title": title, "artist": artist})
             if fetched_text:
-                import re
-                clean_fetched = re.sub(r'\[\d{2}:\d{2}\.\d{2}\]', '', fetched_text)
-                transcript_text = clean_fetched
+                transcript_text = fetched_text
         except Exception:
             pass
 
@@ -569,42 +563,56 @@ def align_lyrics(
 
         # ——— Stage 3: Parse Transcript ———————————————————————————————————
         report(3, "Processing Transcript", "Parsing lyric structure & romanization...")
-        raw_lines = [ln.strip() for ln in transcript_text.strip().splitlines() if ln.strip()]
-
-        if language == "hi":
-            raw_lines = [romanize_display(line) for line in raw_lines]
-
+        
         user_lines = []
-        import re
-        for line in raw_lines:
-            if line.startswith("(") and line.endswith(")"):
-                user_lines.append(line)
-            else:
-                matches = list(re.finditer(r'\([^)]+\)', line))
-                if matches:
-                    clean_line = re.sub(r'\([^)]+\)', '', line).strip()
-                    if clean_line:
-                        user_lines.append(clean_line)
-                    for m in matches:
-                        user_lines.append(m.group(0))
-                else:
-                    user_lines.append(line)
-
-        if not user_lines:
-            raise ValueError("No transcript text provided or fetched.")
-
         user_words = []
-        for l_idx, line in enumerate(user_lines):
-            is_bg_line = line.startswith("(") or line.startswith("（")
-            for w in line.split():
-                user_words.append({
-                    "text": w,
-                    "clean": clean_word(w),
-                    "line_idx": l_idx,
-                    "bg": is_bg_line,
-                    "start": None,
-                    "end": None,
-                })
+        
+        if transcript_text and transcript_text.strip():
+            import re
+            cleaned_lines = []
+            for line in transcript_text.strip().splitlines():
+                ln = line.strip()
+                if not ln:
+                    continue
+                # Skip LRC metadata header tags
+                if ln.startswith(("[ti:", "[ar:", "[al:", "[by:", "[offset:", "[re:", "[ve:")):
+                    continue
+                # Clean timestamps [MM:SS.xx], <MM:SS.xx>, and singer voice tags v1:, v2:
+                ln = re.sub(r"\[\d{2}:\d{2}(?:\.\d+)?\]", "", ln)
+                ln = re.sub(r"<\d{2}:\d{2}(?:\.\d+)?>", "", ln)
+                ln = re.sub(r"v\d+:", "", ln).strip()
+                if ln:
+                    cleaned_lines.append(ln)
+
+            raw_lines = cleaned_lines
+            if language == "hi":
+                raw_lines = [romanize_display(line) for line in raw_lines]
+
+            for line in raw_lines:
+                if line.startswith("(") and line.endswith(")"):
+                    user_lines.append(line)
+                else:
+                    matches = list(re.finditer(r'\([^)]+\)', line))
+                    if matches:
+                        clean_line = re.sub(r'\([^)]+\)', '', line).strip()
+                        if clean_line:
+                            user_lines.append(clean_line)
+                        for m in matches:
+                            user_lines.append(m.group(0))
+                    else:
+                        user_lines.append(line)
+
+            for l_idx, line in enumerate(user_lines):
+                is_bg_line = line.startswith("(") or line.startswith("（")
+                for w in line.split():
+                    user_words.append({
+                        "text": w,
+                        "clean": clean_word(w),
+                        "line_idx": l_idx,
+                        "bg": is_bg_line,
+                        "start": None,
+                        "end": None,
+                    })
 
         # ——— Stage 4: WhisperX ASR & Phoneme Alignment ——————————————————
         report(4, f"WhisperX ASR & Phoneme Alignment ({model_size})", "Transcribing & aligning phonemes...")
@@ -644,21 +652,49 @@ def align_lyrics(
 
         # ——— Stage 5: Match & Build Synchronized ELRC ———————————————————
         report(5, "Building Synchronized ELRC", "Running DTW & interpolating timestamps...")
-        pairs = match_user_to_asr(user_words, asr_words)
+        
+        # Scenario A: User/LRCLIB transcript provided -> DTW Align & Monotonic Interpolate
+        if user_words:
+            pairs = match_user_to_asr(user_words, asr_words)
 
-        for u_idx, a_idx in pairs:
-            user_words[u_idx]["start"] = asr_words[a_idx]["start"]
-            user_words[u_idx]["end"]   = asr_words[a_idx]["end"]
+            for u_idx, a_idx in pairs:
+                user_words[u_idx]["start"] = asr_words[a_idx]["start"]
+                user_words[u_idx]["end"]   = asr_words[a_idx]["end"]
 
-        user_words = interpolate_timestamps(user_words, duration_sec, audio=audio)
+            user_words = interpolate_timestamps(user_words, duration_sec, audio=audio)
 
-        lines_with_words = [{"line_text": line, "words": []} for line in user_lines]
-        for w in user_words:
-            lines_with_words[w["line_idx"]]["words"].append({
-                "word":  w["text"],
-                "start": round(float(w["start"]), 3),
-                "end":   round(float(w["end"]), 3),
-            })
+            lines_with_words = [{"line_text": line, "words": []} for line in user_lines]
+            for w in user_words:
+                lines_with_words[w["line_idx"]]["words"].append({
+                    "word":  w["text"],
+                    "start": round(float(w["start"]), 3),
+                    "end":   round(float(w["end"]), 3),
+                })
+        else:
+            # Scenario B: Pure ASR Auto-Generation (WhisperX transcribed lyrics directly from audio)
+            lines_with_words = []
+            for seg in aligned.get("segments", []):
+                seg_text = seg.get("text", "").strip()
+                if not seg_text:
+                    continue
+                seg_words = []
+                last_end = seg.get("start", 0.0)
+                for w in seg.get("words", []):
+                    w_text = w.get("word", "").strip()
+                    if not w_text:
+                        continue
+                    w_start = w.get("start", last_end)
+                    w_end = w.get("end", w_start + 0.3)
+                    last_end = w_end
+                    seg_words.append({
+                        "word": w_text,
+                        "start": round(float(w_start), 3),
+                        "end": round(float(w_end), 3)
+                    })
+                lines_with_words.append({
+                    "line_text": seg_text,
+                    "words": seg_words
+                })
 
         if format_mode == "line":
             from elrc_builder import build_lrc_lines
