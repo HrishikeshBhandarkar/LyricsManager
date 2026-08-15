@@ -458,7 +458,8 @@
                     }
                 } else {
                     // Fallback to plain split
-                    words = txt.split(/\s+/).map(w => ({ t: w, s: lineTime, e: null }));
+                    const parts = txt.split(/\s+/).filter(Boolean);
+                    words = parts.map((w, wi) => ({ t: wi === parts.length - 1 ? w : w + " ", s: lineTime, e: null }));
                 }
             } else {
                 words = txt.split(/\s+/).map(w => ({ t: w, s: lineTime, e: null }));
@@ -506,7 +507,7 @@
                     const ws = w.s != null ? w.s : (l.time != null ? l.time : 0);
                     const isLast = wi === l.words.length - 1;
                     return {
-                        text: w.t.trimEnd() + (isLast ? "" : " "),
+                        text: isLast ? w.t.trimEnd() : w.t,
                         part: true,
                         timestamp: Math.round(ws * 1000),
                         endtime: Math.round((w.e != null ? w.e : ws + 0.6) * 1000),
@@ -548,7 +549,7 @@
                     const ws = w.s != null ? w.s : (l.time != null ? l.time : 0);
                     const isLast = wi === l.words.length - 1;
                     return {
-                        text: w.t.trimEnd() + (isLast ? "" : " "),
+                        text: isLast ? w.t.trimEnd() : w.t,
                         part: true,
                         timestamp: Math.round(ws * 1000),
                         endtime: Math.round((w.e != null ? w.e : ws + 0.6) * 1000),

@@ -226,72 +226,90 @@
     .nowplaying {
         position: fixed; inset: 0; z-index: 300;
         opacity: 0; pointer-events: none;
-        transition: opacity 0.45s ease;
+        transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
         background: #000;
         display: flex; flex-direction: column;
+        user-select: none;
     }
     .nowplaying.open { opacity: 1; pointer-events: auto; }
     .np-bg {
-        position: absolute; inset: -8%;
+        position: absolute; inset: -18%;
         overflow: hidden;
+        pointer-events: none;
     }
     .np-bg img {
         width: 100%; height: 100%; object-fit: cover;
-        filter: blur(72px) saturate(1.5) brightness(0.72);
-        transform: scale(1.14);
+        filter: blur(88px) saturate(1.85) brightness(0.70);
+        transform: scale(1.22);
+        animation: np-bg-motion 26s ease-in-out infinite alternate;
+        will-change: transform, filter;
     }
-    .np-body {
-        position: relative; z-index: 2; flex: 1; min-height: 0;
-        display: flex; align-items: center;
-        gap: clamp(28px, 6vw, 90px);
-        padding: 10px clamp(24px, 6vw, 90px) 0;
-    }
-    .np-art-col { display: flex; flex-direction: column; align-items: center; gap: 16px; flex-shrink: 0; order: 2; }
-    .np-art-frame {
-        width: min(38vh, 400px); aspect-ratio: 1 / 1;
-        border-radius: 18px; overflow: hidden; position: relative;
-        background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.03));
-        box-shadow: 0 30px 90px rgba(0,0,0,0.65);
-    }
-    .np-art-frame img {
-        width: 100%; height: 100%; object-fit: cover; display: block;
-        animation: art-float 9s ease-in-out infinite alternate;
-    }
-    .np-art-meta { text-align: center; max-width: min(38vh, 400px); }
-    .np-art-title { font-size: 18px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .np-art-album { font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,0.6); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .np-lyrics-col { order: 1; flex: 1; min-width: 0; height: min(58vh, 560px); display: flex; flex-direction: column; }
-    @keyframes kenburns {
-        0%   { transform: scale(1.10) translate3d(-2%, -1.2%, 0); }
-        45%  { transform: scale(1.22) translate3d(2.2%, 1%, 0); }
-        100% { transform: scale(1.15) translate3d(-1%, 2%, 0); }
-    }
-    @keyframes art-float {
-        0%   { transform: translateY(-6px) scale(1); }
-        100% { transform: translateY(8px) scale(1.03); }
+    @keyframes np-bg-motion {
+        0%   { transform: scale(1.12) translate3d(-3.5%, -2.5%, 0) rotate(0deg); filter: blur(76px) saturate(1.6) brightness(0.66); }
+        25%  { transform: scale(1.28) translate3d(3%, 2%, 0) rotate(1.2deg); filter: blur(96px) saturate(1.9) brightness(0.76); }
+        50%  { transform: scale(1.22) translate3d(-2.5%, 3.5%, 0) rotate(-1.2deg); filter: blur(84px) saturate(1.75) brightness(0.7); }
+        75%  { transform: scale(1.34) translate3d(2.5%, -3%, 0) rotate(1deg); filter: blur(102px) saturate(2) brightness(0.74); }
+        100% { transform: scale(1.18) translate3d(1.5%, 2%, 0) rotate(-0.5deg); filter: blur(90px) saturate(1.85) brightness(0.72); }
     }
     .np-tint {
         position: absolute; inset: 0;
         background:
-            radial-gradient(130% 110% at 50% 0%, rgba(var(--art-tint), 0.42) 0%, transparent 58%),
-            radial-gradient(110% 110% at 85% 105%, rgba(var(--art-tint2), 0.4) 0%, transparent 55%),
-            linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.12) 30%, rgba(0,0,0,0.2) 62%, rgba(0,0,0,0.62) 100%);
+            radial-gradient(130% 110% at 50% 0%, rgba(var(--art-tint), 0.48) 0%, transparent 60%),
+            radial-gradient(110% 110% at 85% 105%, rgba(var(--art-tint2), 0.45) 0%, transparent 58%),
+            linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.10) 30%, rgba(0,0,0,0.22) 65%, rgba(0,0,0,0.58) 100%);
+        animation: np-tint-breathe 18s ease-in-out infinite alternate;
+        pointer-events: none;
+    }
+    @keyframes np-tint-breathe {
+        0%   { opacity: 0.85; transform: scale(1); }
+        50%  { opacity: 1; transform: scale(1.03); }
+        100% { opacity: 0.90; transform: scale(1.01); }
     }
 
-    .np-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; padding: 22px 28px 0; flex-shrink: 0; }
-    .np-back { color: #fff; width: 38px; height: 38px; border-radius: 50%; background: rgba(0,0,0,0.25); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
-    .np-back:hover { background: rgba(0,0,0,0.45); }
-    .np-back svg { width: 17px; height: 17px; }
-    .np-head { margin: 0 auto; text-align: center; }
-    .np-head .lbl { font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(255,255,255,0.65); }
-    .np-head .tt { font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
-    .np-head .aa { font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 500; }
-    .np-spacer { width: 38px; }
+    .np-body {
+        position: relative; z-index: 2; flex: 1; min-height: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: clamp(36px, 8vw, 120px);
+        padding: 40px 40px 90px clamp(60px, 10vw, 140px);
+    }
+    .np-art-col { display: flex; flex-direction: column; align-items: center; gap: 14px; flex-shrink: 0; order: 1; width: min(54vh, 540px); }
+    .np-art-frame {
+        width: min(52vh, 520px); aspect-ratio: 1 / 1;
+        border-radius: 14px; overflow: hidden; position: relative;
+        background: rgba(255,255,255,0.06);
+        box-shadow: 0 30px 90px rgba(0,0,0,0.75), 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .np-art-frame img {
+        width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .np-bg video {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; display: none;
+        filter: blur(88px) saturate(1.85) brightness(0.70);
+        transform: scale(1.22);
+        animation: np-bg-motion 26s ease-in-out infinite alternate;
+        will-change: transform, filter;
+        opacity: 0; transition: opacity 500ms ease-in;
+    }
+    .np-art-frame video {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; display: none; border-radius: 14px;
+        opacity: 0; transition: opacity 500ms ease-in;
+    }
+    .np-art-meta { text-align: center; width: 100%; margin-top: 6px; }
+    .np-art-title { font-size: 16px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px; }
+    .np-art-album { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.72); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .np-lyrics-col { order: 2; flex: 1; max-width: 55%; height: 100%; display: flex; flex-direction: column; }
+
+    .np-top { position: absolute; top: 22px; left: 24px; z-index: 10; display: flex; align-items: center; }
+    .np-back { color: rgba(255,255,255,0.65); width: 38px; height: 38px; border-radius: 50%; background: rgba(0,0,0,0.22); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s, opacity 0.2s; }
+    .np-back:hover { background: rgba(0,0,0,0.55); color: #fff; }
+    .np-back svg { width: 18px; height: 18px; }
 
     .np-lyrics { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .np-lyrics.hidden { display: none; }
     .np-lyrics am-lyrics { height: 100%; width: 100%; display: block; }
-    .np-lyrics am-lyrics { --lyrics-scroll-padding-top: 42%; --lyplus-font-size-base: 36px; }
+    .np-lyrics am-lyrics { --lyrics-scroll-padding-top: 42%; --lyplus-font-size-base: 38px; }
 
     .np-nolyrics { position: relative; z-index: 2; flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 30px; text-align: center; }
     .np-nolyrics.show { display: flex; }
@@ -311,32 +329,41 @@
     .np-action.primary { background: #fff; color: #000; }
     .np-action.primary:hover { background: #e8e8ed; }
 
-    .np-bottom { position: relative; z-index: 2; padding: 8px 40px calc(22px + env(safe-area-inset-bottom)); flex-shrink: 0; }
-    .np-seek-row { display: flex; align-items: center; gap: 14px; }
-    .np-seek-row .time { font-size: 11px; color: rgba(255,255,255,0.6); font-variant-numeric: tabular-nums; min-width: 40px; text-align: center; font-weight: 500; }
+    /* ============ FLOATING ACTION PILL (BOTTOM RIGHT) ============ */
+    .np-floating-dock {
+        position: absolute; right: 28px; bottom: 24px; z-index: 15;
+        display: flex; align-items: center; gap: 6px;
+        background: rgba(30, 30, 32, 0.45);
+        backdrop-filter: blur(24px) saturate(1.8);
+        -webkit-backdrop-filter: blur(24px) saturate(1.8);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 99px; padding: 4px 8px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .dock-btn {
+        color: rgba(255,255,255,0.7); width: 28px; height: 28px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        transition: color 0.15s, background 0.15s; font-size: 12px; font-weight: 600;
+    }
+    .dock-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
+    .dock-btn.active { color: var(--accent); }
+    .dock-btn.text-pill { width: auto; padding: 0 6px; border-radius: 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .dock-btn svg { width: 14px; height: 14px; }
+
+    /* Auto-hiding scrubber overlay on bottom hover */
+    .np-scrub-bar {
+        position: absolute; left: 40px; right: 260px; bottom: 30px; z-index: 12;
+        display: flex; align-items: center; gap: 12px;
+        opacity: 0; transition: opacity 0.25s ease;
+    }
+    .nowplaying:hover .np-scrub-bar { opacity: 1; }
+    .np-scrub-bar .time { font-size: 11px; color: rgba(255,255,255,0.65); font-variant-numeric: tabular-nums; min-width: 36px; text-align: center; }
     .np-seek { flex: 1; --prog: 0%; }
     .np-seek::-webkit-slider-runnable-track {
-        height: 5px; border-radius: 3px;
-        background: linear-gradient(to right, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.9) var(--prog), rgba(255,255,255,0.22) var(--prog), rgba(255,255,255,0.22) 100%);
-        box-shadow: 0 0 8px rgba(255,255,255,0.25);
+        height: 4px; border-radius: 2px;
+        background: linear-gradient(to right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.95) var(--prog), rgba(255,255,255,0.2) var(--prog), rgba(255,255,255,0.2) 100%);
     }
-    .np-seek::-webkit-slider-thumb { width: 13px; height: 13px; }
-    .np-ctl-row { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 10px; }
-    .np-ctl { color: #fff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
-    .np-ctl:hover { background: rgba(255,255,255,0.12); }
-    .np-ctl svg { width: 19px; height: 19px; }
-    .np-ctl.play {
-        width: 62px; height: 62px; background: rgba(255,255,255,0.92); color: #000;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-        transition: background 0.15s, transform 0.1s;
-    }
-    .np-ctl.play:hover { background: #fff; }
-    .np-ctl.play:active { transform: scale(0.96); }
-    .np-ctl.play svg { width: 26px; height: 26px; }
-    .np-vol-wrap { position: absolute; right: 40px; bottom: 46px; display: flex; align-items: center; gap: 10px; opacity: 0; transition: opacity 0.2s; }
-    .np-bottom:hover .np-vol-wrap { opacity: 1; }
-    .np-vol-wrap svg { width: 16px; height: 16px; color: #fff; }
-    .np-vol-wrap input { width: 100px; }
+    .np-seek::-webkit-slider-thumb { width: 10px; height: 10px; }
 
     /* ============ MODAL ============ */
     .modal { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 20px; }
@@ -369,10 +396,10 @@
         .ctl.vol input { width: 60px; }
         .search { width: 150px; }
         .np-vol-wrap { display: none; }
-        .np-body { flex-direction: column; justify-content: center; gap: 22px; padding: 10px 20px 0; }
-        .np-art-frame { width: min(26vh, 200px); }
+        .np-body { flex-direction: column; justify-content: center; gap: 22px; padding: 10px 20px 90px; }
+        .np-art-frame { width: min(30vh, 220px); }
         .np-art-col { order: 1; }
-        .np-lyrics-col { order: 2; height: 40vh; }
+        .np-lyrics-col { order: 2; height: 100%; flex: 1; }
         .np-art-meta { display: none; }
     }
 </style>
@@ -518,23 +545,17 @@
     </div>
 
     <div class="nowplaying" id="np">
-        <div class="np-bg"><img id="np-bg-img" alt=""></div>
+        <div class="np-bg"><img id="np-bg-img" alt=""><video id="np-bg-video" muted loop playsinline preload="metadata"></video></div>
         <div class="np-tint" id="np-tint"></div>
         <div class="np-top">
-            <button class="np-back" id="np-back" title="Close">
+            <button class="np-back" id="np-back" title="Exit Fullscreen">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div class="np-head">
-                <div class="lbl">Now Playing</div>
-                <div class="tt" id="np-title">—</div>
-                <div class="aa" id="np-artist">—</div>
-            </div>
-            <div class="np-spacer"></div>
         </div>
 
         <div class="np-body">
             <div class="np-art-col">
-                <div class="np-art-frame"><img id="np-art-img" alt=""></div>
+                <div class="np-art-frame"><img id="np-art-img" alt=""><video id="np-art-video" muted loop playsinline preload="metadata"></video></div>
                 <div class="np-art-meta">
                     <div class="np-art-title" id="np-art-title">—</div>
                     <div class="np-art-album" id="np-art-album">—</div>
@@ -567,27 +588,31 @@
             </div>
         </div>
 
-        <div class="np-bottom">
-            <div class="np-seek-row">
-                <span class="time" id="np-ct">0:00</span>
-                <input type="range" class="np-seek" id="np-seek" min="0" max="0" step="0.1" value="0">
-                <span class="time" id="np-dur">0:00</span>
-            </div>
-            <div class="np-ctl-row">
-                <button class="np-ctl" id="np-prev" title="Previous">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM20 6l-9 6 9 6V6z"/></svg>
-                </button>
-                <button class="np-ctl play" id="np-play" title="Play / Pause">
-                    <svg viewBox="0 0 24 24" fill="currentColor" id="np-play-ic"><path d="M8 5.5v13l11-6.5z"/></svg>
-                </button>
-                <button class="np-ctl" id="np-next" title="Next">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 6l9 6-9 6V6z"/></svg>
-                </button>
-            </div>
-            <div class="np-vol-wrap">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 4V5L7 9H3z"/></svg>
-                <input type="range" class="volume" id="np-vol" min="0" max="1" step="0.01" value="0.8">
-            </div>
+        <div class="np-scrub-bar" id="np-scrub-bar">
+            <span class="time" id="np-ct">0:00</span>
+            <input type="range" class="np-seek" id="np-seek" min="0" max="0" step="0.1" value="0">
+            <span class="time" id="np-dur">0:00</span>
+        </div>
+
+        <div class="np-floating-dock" id="np-floating-dock">
+            <button class="dock-btn active" id="dock-eq" title="Lyrics View">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 7h16v2H4zm0 8h16v2H4zm0-4h16v2H4z"/></svg>
+            </button>
+            <button class="dock-btn" id="dock-trans" title="Translation / Romanization">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </button>
+            <button class="dock-btn text-pill" id="dock-speed" title="Offset / Speed">
+                0.0s
+            </button>
+            <button class="dock-btn" id="dock-like" title="Favorite">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+            </button>
+            <button class="dock-btn" id="dock-dislike" title="Options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
+            </button>
+            <button class="dock-btn" id="dock-fullscreen" title="Toggle Fullscreen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
         </div>
     </div>
 </div>
@@ -609,6 +634,7 @@
 <input type="file" id="lyricsInput" accept=".lrc,.elrc,.txt,.lrcx,.lyrics,.text,text/plain" hidden>
 
 <script src="am-lyrics.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <script>
 "use strict";
 
@@ -744,7 +770,7 @@ async function parseId3(file) {
         }
         else if (id === "APIC" || id === "PIC") {
             let p = 1;
-            let mime, picType = 0;
+            let mime = "image/jpeg", picType = 0;
             if (is22) {
                 mime = String.fromCharCode(data[1], data[2], data[3]).toLowerCase();
                 picType = data[4];
@@ -757,9 +783,23 @@ async function parseId3(file) {
             }
             const dEnd = findTerm(data, p, enc);
             p = dEnd + termLen(enc);
-            if (p < data.length && (mime.includes("image") || /^(png|jpe?g|gif|bmp|webp)/.test(mime))) {
-                const blob = new Blob([data.subarray(p)], { type: mime.startsWith("image/") ? mime : "image/" + mime });
-                if (blob.size > 100) { meta.art = URL.createObjectURL(blob); meta.artType = mime; }
+
+            // Sniff magic bytes to ensure exact image data start
+            let imgStart = p;
+            for (let i = p; i < Math.min(data.length - 4, p + 96); i++) {
+                if (data[i] === 0xFF && data[i+1] === 0xD8 && data[i+2] === 0xFF) { imgStart = i; mime = "image/jpeg"; break; }
+                if (data[i] === 0x89 && data[i+1] === 0x50 && data[i+2] === 0x4E && data[i+3] === 0x47) { imgStart = i; mime = "image/png"; break; }
+                if (data[i] === 0x52 && data[i+1] === 0x49 && data[i+2] === 0x46 && data[i+3] === 0x46) { imgStart = i; mime = "image/webp"; break; }
+            }
+
+            if (imgStart < data.length) {
+                const rawImg = data.subarray(imgStart);
+                if (rawImg.length > 100) {
+                    let type = mime.startsWith("image/") ? mime : ("image/" + (mime || "jpeg"));
+                    const blob = new Blob([rawImg], { type });
+                    meta.art = URL.createObjectURL(blob);
+                    meta.artType = type;
+                }
             }
         }
     }
@@ -775,17 +815,224 @@ function guessFromFilename(name) {
 
 /* ============ ONLINE LOOKUPS ============ */
 
+const OUR_API_URL = "http://localhost:8765/api/art";
+const __ourApiCache = new Map();
+
+async function ourApiArt(song) {
+    const key = (song.artist || "?") + "|" + (song.title || "") + "|" + (song.album || "");
+    if (__ourApiCache.has(key)) return __ourApiCache.get(key);
+    const p = new URLSearchParams();
+    p.set("song", song.title || "");
+    if (song.artist) p.set("artist", song.artist);
+    if (song.album) p.set("album", song.album);
+    try {
+        const r = await fetch(OUR_API_URL + "?" + p.toString(), { mode: "cors" });
+        if (!r.ok) throw new Error("art api error " + r.status);
+        const j = await r.json();
+        if (!j || !j.found) throw new Error("art not found");
+        __ourApiCache.set(key, j);
+        return j;
+    } catch (e) {
+        __ourApiCache.set(key, null);
+        return null;
+    }
+}
+
 async function fetchArtwork(song) {
     try {
-        const term = encodeURIComponent(((song.artist || "") + " " + song.title).trim());
-        const r = await fetch("https://itunes.apple.com/search?term=" + term + "&media=music&entity=song&limit=3");
-        const j = await r.json();
-        if (j.resultCount && j.results) {
-            const hit = j.results.find(x => x.artworkUrl100) || j.results[0];
-            if (hit && hit.artworkUrl100) return hit.artworkUrl100.replace("100x100bb", "600x600bb");
-        }
+        const ours = await ourApiArt(song);
+        if (ours && ours.static) return ours.static;
     } catch (e) {}
+    try {
+        let t = (song.title || "").trim();
+        let a = (song.artist || "").trim();
+        
+        let cleanT = t.replace(/\(.*?\)|\[.*?\]/g, "")
+                      .replace(/\b(remaster(ed)?|\d{4}\s*remaster|live|official|audio|video|feat\..*|ft\..*)\b/gi, "")
+                      .trim();
+        let cleanA = a.replace(/\(.*?\)|\[.*?\]/g, "")
+                      .replace(/\b(feat\..*|ft\..*)\b/gi, "")
+                      .trim();
+        
+        const queries = [
+            `${cleanA} ${cleanT}`.trim(),
+            `${a} ${t}`.trim(),
+            cleanT || t
+        ].filter(Boolean);
+
+        for (const q of queries) {
+            const term = encodeURIComponent(q);
+            const r = await fetch("https://itunes.apple.com/search?term=" + term + "&media=music&entity=song&limit=5");
+            if (r.ok) {
+                const j = await r.json();
+                if (j.resultCount && j.results && j.results.length) {
+                    const hit = j.results.find(x => x.artworkUrl100) || j.results[0];
+                    if (hit && hit.artworkUrl100) {
+                        return hit.artworkUrl100.replace("100x100bb", "1000x1000bb");
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("Artwork fetch error:", e);
+    }
     return null;
+}
+
+const ANIM_CACHE_KEY = "boiduAnimCache3";
+const ANIM_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+
+function animCacheRead(key) {
+    try {
+        const o = JSON.parse(localStorage.getItem(ANIM_CACHE_KEY) || "{}");
+        const e = o[key];
+        if (!e) return undefined;
+        if (!e.url && e.t && Date.now() - e.t > ANIM_CACHE_TTL) return undefined;
+        return e.url;
+    } catch (e) { return undefined; }
+}
+
+function animCacheWrite(key, url) {
+    try {
+        const o = JSON.parse(localStorage.getItem(ANIM_CACHE_KEY) || "{}");
+        o[key] = { url: url, t: Date.now() };
+        const ks = Object.keys(o).sort((x, y) => o[x].t - o[y].t);
+        while (ks.length > 400) delete o[ks.shift()];
+        localStorage.setItem(ANIM_CACHE_KEY, JSON.stringify(o));
+    } catch (e) {}
+}
+
+function isSafeVideoUrl(url) {
+    try {
+        const u = new URL(url);
+        return u.protocol === "https:" && u.host === "mvod.itunes.apple.com";
+    } catch (e) { return false; }
+}
+
+function stopAnimatedVideo(vid) {
+    if (vid.__hls) { try { vid.__hls.destroy(); } catch (e) {} vid.__hls = null; }
+    if (vid.__canplayFn) { vid.removeEventListener("canplay", vid.__canplayFn); vid.__canplayFn = null; }
+    if (vid.__watchdog) { clearTimeout(vid.__watchdog); vid.__watchdog = 0; }
+    vid.pause();
+    vid.removeAttribute("src");
+    try { vid.load(); } catch (e) {}
+    vid.style.opacity = "0";
+}
+
+function playAnimatedVideo(vid, url, fallbackHls) {
+    stopAnimatedVideo(vid);
+    if (!url) return;
+    vid.style.opacity = "0";
+    const ready = () => {
+        vid.style.opacity = "1";
+        if (vid.__watchdog) { clearTimeout(vid.__watchdog); vid.__watchdog = 0; }
+    };
+    vid.__canplayFn = ready;
+    vid.addEventListener("canplay", ready, { once: true });
+    vid.addEventListener("playing", ready, { once: true });
+
+    const fail = () => {
+        const song = state.songs[state.currentIndex];
+        if (!song || song.__animUrl !== url) return;
+        const key = (song.artist || "?") + "|" + (song.album || song.title);
+        if (fallbackHls && fallbackHls !== url) {
+            song.__animUrl = fallbackHls;
+            song.__animHls = null;
+            animCacheWrite(key, fallbackHls);
+            renderAll();
+            setNPArt(song);
+            return;
+        }
+        song.__animUrl = null;
+        animCacheWrite(key, null);
+        renderAll();
+        setNPArt(song);
+    };
+
+    const isHls = /\.m3u8(\?|$)/i.test(url);
+    const nativeHls = !!(vid.canPlayType && vid.canPlayType("application/vnd.apple.mpegurl"));
+    if (isHls && typeof Hls !== "undefined" && Hls.isSupported()) {
+        const hls = new Hls({ maxBufferLength: 30, abrEwmaDefaultEstimate: 1e6 });
+        vid.__hls = hls;
+        hls.loadSource(url);
+        hls.attachMedia(vid);
+        hls.on(Hls.Events.MANIFEST_PARSED, (evt, data) => {
+            if (!data || !data.levels || !data.levels.length) return;
+                let pick = -1, bestW = -1;
+                data.levels.forEach((lv, i) => {
+                    const codec = lv.codecSet || "";
+                    if (codec.indexOf("avc1") === 0 && (lv.width || 0) >= bestW) {
+                        bestW = lv.width || 0;
+                        pick = i;
+                    }
+                });
+                if (pick >= 0) hls.currentLevel = pick;
+                vid.play().catch(() => {});
+            });
+            hls.on(Hls.Events.ERROR, (evt, data) => {
+                if (data && data.fatal) {
+                    if (data.fatal === Hls.ErrorTypes.MEDIA_ERROR || data.fatal === Hls.ErrorTypes.NETWORK_ERROR) {
+                        fail();
+                    } else {
+                        try { hls.destroy(); } catch (e) {} vid.__hls = null;
+                    }
+                }
+            });
+            vid.play().catch(() => {});
+            vid.__watchdog = setTimeout(() => { if (vid.readyState <= 1) fail(); }, 14000);
+            return;
+        }
+        if (isHls && nativeHls) {
+            vid.src = url;
+            vid.play().catch(() => {});
+            vid.addEventListener("error", fail, { once: true });
+            vid.__watchdog = setTimeout(() => { if (vid.readyState <= 1) fail(); }, 14000);
+            return;
+        }
+        vid.src = url;
+        vid.play().catch(() => {});
+        vid.addEventListener("error", fail, { once: true });
+        vid.__watchdog = setTimeout(() => { if (vid.readyState <= 1) fail(); }, 14000);
+}
+
+async function fetchAnimatedArtwork(song) {
+    const t = (song.title || "").trim();
+    const a = (song.artist || "").trim();
+    if (!t) return null;
+    const key = (a || "?") + "|" + (song.album || t);
+    const cached = animCacheRead(key);
+    if (cached !== undefined) {
+        return cached ? { static: null, videoUrl: cached } : null;
+    }
+    const ours = await ourApiArt(song);
+    if (ours) {
+        let videoUrl = null, hlsUrl = null;
+        if (ours.videoUrl && isSafeVideoUrl(ours.videoUrl)) videoUrl = ours.videoUrl;
+        if (ours.videoUrlHls && isSafeVideoUrl(ours.videoUrlHls)) hlsUrl = ours.videoUrlHls;
+        const primary = hlsUrl || videoUrl;
+        animCacheWrite(key, primary);
+        return { static: ours.static || null, videoUrl: primary };
+    }
+    try {
+        const p = new URLSearchParams({ s: t, a: a });
+        if (song.album) p.set("al", song.album);
+        if (song.dur && isFinite(song.dur)) p.set("d", String(Math.round(song.dur)));
+        const r = await fetch("https://artwork.boidu.dev/?" + p.toString());
+        if (!r.ok) { animCacheWrite(key, null); return null; }
+        const j = await r.json();
+        if (!j || !j.static) { animCacheWrite(key, null); return null; }
+        const v = document.createElement("video");
+        const nativeHls = !!(v.canPlayType && v.canPlayType("application/vnd.apple.mpegurl"));
+        const hlsAvailable = nativeHls || (typeof window.Hls !== "undefined" && Hls.isSupported());
+        let videoUrl = null;
+        if (j.videoUrl && isSafeVideoUrl(j.videoUrl)) videoUrl = j.videoUrl;
+        else if (j.animated && isSafeVideoUrl(j.animated) && hlsAvailable) videoUrl = j.animated;
+        animCacheWrite(key, videoUrl);
+        return { static: j.static, videoUrl: videoUrl };
+    } catch (e) {
+        console.warn("Animated artwork fetch error:", e);
+        return null;
+    }
 }
 
 async function fetchLyricsOnline(song) {
@@ -837,6 +1084,7 @@ function extractPalette(imgEl) {
 }
 
 function applyTint(song) {
+    if (!song || !song.art) return;
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
@@ -1027,16 +1275,53 @@ function syLtToLrc(entries) {
 /* ============ am-lyrics RENDERING ============ */
 
 function injectShadowCleanup(am) {
-    if (!am || am.__amStyleInjected || !am.shadowRoot) return;
-    am.__amStyleInjected = true;
-    const style = document.createElement("style");
-    style.textContent =
-        ".lyrics-header{display:none !important;}" +
-        ".lyrics-footer{display:none !important;}" +
-        ".lyrics-container{padding-bottom:150px !important;}" +
-        ".lyrics-container:not(.is-unsynced) .lyrics-gap:not(.active){opacity:0 !important;}" +
-        ".lyrics-line.np-done{opacity:0 !important;}";
-    am.shadowRoot.appendChild(style);
+    if (!am || !am.shadowRoot) return;
+    if (!am.__amStyleInjected) {
+        am.__amStyleInjected = true;
+        const style = document.createElement("style");
+        style.textContent =
+            ".lyrics-header{display:none !important;}" +
+            ".lyrics-footer{display:none !important;}" +
+            ".lyrics-container{padding-bottom:160px !important; --lyplus-font-size-base: 38px !important; font-size: 38px !important;}" +
+            ".lyrics-container:not(.is-unsynced) .lyrics-gap:not(.active){opacity:0 !important;}" +
+            ".lyrics-line.np-done{opacity:0 !important;}" +
+            ".lyrics-line{cursor:pointer !important; user-select:none;}" +
+            ".lyrics-line:hover{opacity: 1 !important; filter: brightness(1.22);}" +
+            ".lyrics-line:active{transform: scale(0.985);}";
+        am.shadowRoot.appendChild(style);
+    }
+    if (!am.__seekSetupDone) {
+        am.__seekSetupDone = true;
+        am.shadowRoot.addEventListener("click", (e) => {
+            const lineEl = e.target.closest(".lyrics-line:not(.lyrics-gap)") || e.target.closest("[id^='lyrics-line-']");
+            if (!lineEl) return;
+            
+            let targetMs = null;
+            if (lineEl.id && lineEl.id.startsWith("lyrics-line-")) {
+                const idx = parseInt(lineEl.id.replace("lyrics-line-", ""), 10);
+                if (!isNaN(idx) && am.lyrics && am.lyrics[idx]) {
+                    const l = am.lyrics[idx];
+                    targetMs = (l.timestamp != null && l.timestamp > 0) ? l.timestamp : (l.text && l.text[0] && l.text[0].timestamp != null ? l.text[0].timestamp : null);
+                }
+            }
+            if (targetMs == null) {
+                const allLines = Array.from(am.shadowRoot.querySelectorAll(".lyrics-line:not(.lyrics-gap)"));
+                const idx = allLines.indexOf(lineEl);
+                if (idx >= 0 && am.lyrics && am.lyrics[idx]) {
+                    const l = am.lyrics[idx];
+                    targetMs = (l.timestamp != null && l.timestamp > 0) ? l.timestamp : (l.text && l.text[0] && l.text[0].timestamp != null ? l.text[0].timestamp : null);
+                }
+            }
+            if (targetMs != null && !isNaN(targetMs)) {
+                const targetSec = Math.max(0, targetMs / 1000);
+                audio.currentTime = targetSec;
+                am.currentTime = Math.round(targetMs);
+                if (audio.paused) {
+                    audio.play().catch(() => {});
+                }
+            }
+        });
+    }
 }
 
 async function renderLyricsInto(am, built) {
@@ -1069,7 +1354,7 @@ function describeLyrics(built) {
 /* ============ SONG MANAGEMENT ============ */
 
 async function addFiles(files) {
-    const list = [...files].filter(f => /^audio\//.test(f.type) || /\.(mp3|m4a|aac|flac|ogg|opus|wav|wma)$/i.test(f.name));
+    const list = [...files].filter(f => /^audio\//.test(f.type) || /\.(mp3|m4a|m4b|m4r|aac|flac|alac|ogg|opus|wav|wma|webm|aif|aiff|caf|ape|mka|mp2|mp1)$/i.test(f.name));
     for (const f of list) {
         const url = URL.createObjectURL(f);
         objectUrls.push(url);
@@ -1234,7 +1519,8 @@ function playIcon(isPlay) {
 function updatePlayButtons() {
     const playing = !audio.paused && !audio.ended;
     byId("mini-play-ic").innerHTML = playIcon(playing);
-    byId("np-play-ic").innerHTML = playIcon(playing);
+    const npPlayIc = byId("np-play-ic");
+    if (npPlayIc) npPlayIc.innerHTML = playIcon(playing);
 }
 
 function updateMini() {
@@ -1261,23 +1547,81 @@ function updateMini() {
 function updateNPHead() {
     const song = state.songs[state.currentIndex];
     if (!song) return;
-    byId("np-title").textContent = song.title;
-    byId("np-artist").textContent = song.artist || song.album || "";
     byId("np-art-title").textContent = song.title;
     byId("np-art-album").textContent = song.artist || song.album || "";
+    setNPArt(song);
+}
+
+function setNPArt(song) {
     const bg = byId("np-bg-img");
+    const bgV = byId("np-bg-video");
     const artImg = byId("np-art-img");
-    bg.src = song.art || "";
-    artImg.src = song.art || "";
-    if (!song.art) {
-        bg.style.display = "none";
-        artImg.style.visibility = "hidden";
-        byId("np-tint").style.background = "linear-gradient(to bottom, rgba(20,20,22,0.9), rgba(10,10,12,0.95))";
-    } else {
-        bg.style.display = "";
-        artImg.style.visibility = "";
-        byId("np-tint").style.background = "";
-    }
+    const artV = byId("np-art-video");
+
+    const show = () => {
+        const v = song.__animUrl;
+        bg.style.display = song.art ? "block" : "none";
+        artImg.style.display = song.art ? "block" : "none";
+        artImg.style.visibility = song.art ? "visible" : "hidden";
+        stopAnimatedVideo(bgV);
+        bgV.style.display = "none";
+        artV.style.display = v ? "block" : "none";
+        if (v) {
+            playAnimatedVideo(artV, v, song.__animHls);
+        } else {
+            stopAnimatedVideo(artV);
+        }
+        if (song.art) {
+            bg.src = song.art;
+            artImg.src = song.art;
+        }
+        byId("np-tint").style.background = song.art
+            ? ""
+            : "linear-gradient(to bottom, rgba(35,12,32,0.92), rgba(15,7,18,0.96))";
+        if (song.art) applyTint(song);
+    };
+
+    const useAnimated = (videoUrl, staticUrl, hlsUrl) => {
+        song.art = staticUrl || song.art;
+        song.__animUrl = videoUrl;
+        song.__animHls = hlsUrl || null;
+        renderAll();
+        show();
+    };
+
+    const noAnimated = (staticUrl) => {
+        if (staticUrl && !song.art) {
+            song.art = staticUrl;
+            renderAll();
+        }
+        show();
+    };
+
+    if (song.__animChecked) { show(); return; }
+    song.__animChecked = true;
+
+        if (song.art) {
+            show();
+            fetchAnimatedArtwork(song).then(res => {
+                if (res && res.videoUrl && state.songs[state.currentIndex] && state.songs[state.currentIndex].id === song.id) {
+                    useAnimated(res.videoUrl, res.static, res.hlsUrl);
+                }
+            });
+            return;
+        }
+
+        fetchAnimatedArtwork(song).then(res => {
+            if (!(state.songs[state.currentIndex] && state.songs[state.currentIndex].id === song.id)) return;
+            if (res && res.videoUrl) { useAnimated(res.videoUrl, res.static, res.hlsUrl); return; }
+        if (res && res.static) { noAnimated(res.static); return; }
+        fetchArtwork(song).then(url => {
+            if (url && state.songs[state.currentIndex] && state.songs[state.currentIndex].id === song.id) {
+                song.art = url;
+                renderAll();
+                show();
+            }
+        });
+    });
 }
 
 function setNPOpen(open) {
@@ -1403,19 +1747,27 @@ function tick() {
         const t = audio.currentTime;
         const d = audio.duration;
         byId("np-seek").max = d;
-        if (document.activeElement !== byId("np-seek")) byId("np-seek").value = t;
-        byId("np-ct").textContent = fmtTime(t);
+        if (document.activeElement !== byId("np-seek")) {
+            byId("np-seek").value = t;
+            byId("np-ct").textContent = fmtTime(t);
+            let p = (t / d * 100);
+            if (p > 99.5) p = 100;
+            byId("np-seek").style.setProperty("--prog", p.toFixed(2) + "%");
+        }
         byId("np-dur").textContent = fmtTime(d);
         byId("mini-fill").style.width = (t / d * 100).toFixed(2) + "%";
-        byId("np-seek").style.setProperty("--prog", (t / d * 100).toFixed(2) + "%");
     }
     const am = byId("lyrics");
     if (am && currentLyricsBuilt && currentLyricsBuilt.length) {
-        am.currentTime = Math.round(audio.currentTime * 1000);
+        const nowMs = Math.round(audio.currentTime * 1000);
+        if (!am.__lastT || Math.abs(nowMs - am.__lastT) >= 66) {
+            am.currentTime = nowMs;
+            am.__lastT = nowMs;
+        }
         const now = Date.now();
-        if (now - (tick.__lastDone || 0) > 250) {
-            tick.__lastDone = now;
-            markCompletedLines(am, audio.currentTime * 1000);
+        if (now - (am.__lastDone || 0) > 250) {
+            am.__lastDone = now;
+            markCompletedLines(am, nowMs);
         }
     }
     requestAnimationFrame(tick);
@@ -1520,32 +1872,65 @@ async function matchFolderLyrics(lyricFiles) {
     }
 }
 
-byId("mini-play").addEventListener("click", () => audio.paused ? audio.play() : audio.pause());
-byId("np-play").addEventListener("click", () => audio.paused ? audio.play() : audio.pause());
-byId("mini-next").addEventListener("click", () => { if (state.songs.length) selectSong((state.currentIndex + 1) % state.songs.length, true); });
-byId("np-next").addEventListener("click", () => { if (state.songs.length) selectSong((state.currentIndex + 1) % state.songs.length, true); });
-byId("mini-prev").addEventListener("click", () => { if (state.songs.length) selectSong((state.currentIndex - 1 + state.songs.length) % state.songs.length, true); });
-byId("np-prev").addEventListener("click", () => { if (state.songs.length) selectSong((state.currentIndex - 1 + state.songs.length) % state.songs.length, true); });
+byId("mini-play")?.addEventListener("click", () => audio.paused ? audio.play() : audio.pause());
+byId("np-play")?.addEventListener("click", () => audio.paused ? audio.play() : audio.pause());
+byId("mini-next")?.addEventListener("click", () => { if (state.songs.length) selectSong((state.currentIndex + 1) % state.songs.length, true); });
+byId("np-next")?.addEventListener("click", () => { if (state.songs.length) selectSong((state.currentIndex + 1) % state.songs.length, true); });
+byId("mini-prev")?.addEventListener("click", () => { if (state.songs.length) selectSong((state.currentIndex - 1 + state.songs.length) % state.songs.length, true); });
+byId("np-prev")?.addEventListener("click", () => { if (state.songs.length) selectSong((state.currentIndex - 1 + state.songs.length) % state.songs.length, true); });
 
 audio.addEventListener("play", updatePlayButtons);
 audio.addEventListener("pause", updatePlayButtons);
 audio.addEventListener("ended", () => { if (state.songs.length) selectSong((state.currentIndex + 1) % state.songs.length, true); });
 audio.addEventListener("error", () => { byId("lyr-status").innerHTML = "Could not play this file."; });
 
-byId("np-seek").addEventListener("input", e => {
+byId("np-seek")?.addEventListener("input", e => {
     if (audio.duration && isFinite(audio.duration)) {
-        audio.currentTime = parseFloat(e.target.value);
-        byId("np-ct").textContent = fmtTime(audio.currentTime);
+        const val = parseFloat(e.target.value);
+        byId("np-ct").textContent = fmtTime(val);
+        byId("np-seek").style.setProperty("--prog", (val / audio.duration * 100).toFixed(2) + "%");
     }
 });
 
-byId("vol").addEventListener("input", e => { audio.volume = parseFloat(e.target.value); byId("np-vol").value = e.target.value; });
-byId("np-vol").addEventListener("input", e => { audio.volume = parseFloat(e.target.value); byId("vol").value = e.target.value; });
+byId("np-seek")?.addEventListener("change", e => {
+    if (audio.duration && isFinite(audio.duration)) {
+        audio.currentTime = parseFloat(e.target.value);
+    }
+});
 
-byId("mini-art").addEventListener("click", () => setNPOpen(true));
-byId("mini-meta").addEventListener("click", () => setNPOpen(true));
-byId("mini-lyrics").addEventListener("click", () => setNPOpen(!npOpen));
-byId("np-back").addEventListener("click", () => setNPOpen(false));
+byId("vol")?.addEventListener("input", e => { audio.volume = parseFloat(e.target.value); if (byId("np-vol")) byId("np-vol").value = e.target.value; });
+byId("np-vol")?.addEventListener("input", e => { audio.volume = parseFloat(e.target.value); if (byId("vol")) byId("vol").value = e.target.value; });
+
+byId("mini-art")?.addEventListener("click", () => setNPOpen(true));
+byId("mini-meta")?.addEventListener("click", () => setNPOpen(true));
+byId("mini-lyrics")?.addEventListener("click", () => setNPOpen(!npOpen));
+byId("np-back")?.addEventListener("click", () => setNPOpen(false));
+
+// Floating dock buttons
+byId("dock-fullscreen")?.addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen().catch(() => {});
+    }
+});
+
+byId("dock-trans")?.addEventListener("click", () => {
+    const am = byId("lyrics");
+    if (am) {
+        am.showTranslation = !am.showTranslation;
+        am.showRomanization = !am.showRomanization;
+        byId("dock-trans").classList.toggle("active", am.showTranslation || am.showRomanization);
+    }
+});
+
+byId("dock-like")?.addEventListener("click", () => {
+    byId("dock-like").classList.toggle("active");
+});
+
+byId("dock-dislike")?.addEventListener("click", () => {
+    byId("dock-dislike").classList.toggle("active");
+});
 
 function openModal() {
     byId("modal").classList.add("show");
