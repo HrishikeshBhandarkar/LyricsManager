@@ -1,36 +1,14 @@
 # As the name suggests, this scans the specified directory and outputs supported audio files in a dictionary.
 from pathlib import Path
 
-# Comprehensive set of ALL known audio file formats on Earth:
+# Supported core audio formats:
 SUPPORTED_AUDIO_EXTENSIONS = {
-    # Standard Consumer & Streaming Formats
-    ".mp3", ".mp2", ".mp1", ".mpa", ".m4a", ".m4b", ".m4p", ".m4r", ".aac", ".mp4",
-    # Lossless PCM & Audiophile Formats
-    ".flac", ".fla", ".wav", ".wave", ".bwf", ".aiff", ".aif", ".aifc", ".alac",
-    # OGG, Opus & Open Codecs
-    ".ogg", ".oga", ".opus", ".spx", ".ogx",
-    # Windows Media, Monkey's Audio & WavPack
-    ".wma", ".asf", ".ape", ".mac", ".wv", ".wvp",
-    # Audiophile High-Res & Specialized Lossless
-    ".tta", ".tak", ".ofr", ".ofs", ".shn", ".dsd", ".dsf", ".dff",
-    # Dolby, DTS & Cinema Multi-Channel
-    ".ac3", ".eac3", ".ec3", ".dts", ".dtshd", ".dtsma", ".mlp", ".truehd", ".thd",
-    # Speech, Mobile & Telephony
-    ".amr", ".awb", ".gsm", ".qcp", ".vox",
-    # Studio, Legacy & Workstation Formats
-    ".au", ".snd", ".caf", ".w64", ".rf64", ".pcm", ".raw", ".lpcm", ".voc", ".smp",
-    ".sd2", ".iff", ".svx", ".8svx", ".16sv", ".paf", ".sf", ".nist", ".sph", ".avr", ".cdr", ".cda",
-    # RealAudio & TwinVQ
-    ".ra", ".ram", ".rm", ".vqf",
-    # Audio Containers & Web Streams
-    ".mka", ".webm", ".weba", ".flv", ".f4a", ".f4b", ".3gp", ".3g2", ".mov",
-    # MIDI & Tracker Module Formats
-    ".mid", ".midi", ".kar", ".rmi",
-    ".mod", ".xm", ".it", ".s3m", ".stm", ".mtm", ".umx", ".mo3", ".669", ".far", ".okt", ".ptm",
-    # Chiptune & Video Game Audio Emulation
-    ".vgm", ".vgz", ".nsf", ".nsfe", ".spc", ".gym", ".gbs", ".hes", ".kss", ".ay", ".sap", ".sid",
-    # Game Engine & Console Audio
-    ".adx", ".hca", ".brstm", ".bcstm", ".bfstm", ".vag", ".at9", ".at3", ".xma", ".fsb", ".bnk", ".pck"
+    ".m4a",
+    ".mp3",
+    ".flac",
+    ".alac",
+    ".aac",
+    ".webm",
 }
 
 def scan(Directory: str) -> dict[int, dict]:
