@@ -14,7 +14,7 @@
 
 ## What is LyricsManager?
 
-Most lyric fetchers give you plain text or, at best, line-by-line `.lrc` timing. LyricsManager goes a step further: it pulls **word-level synced lyrics** — the kind that power the karaoke-style animations in Apple Music and Spotify — and gets them onto your own files.
+Most lyric fetchers give you plain text or, at best, line-by-line `.lrc` timing. LyricsManager goes a step further: it pulls **word-level synced lyrics** — the kind that power the karaoke-style animations in Apple Music — and gets them onto your own files.
 
 It does this in three ways:
 
