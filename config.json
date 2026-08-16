@@ -1,4 +1,4 @@
 {
-    "whisper_model": "large-v2",
+    "whisper_model": "base",
     "preferred_provider": ""
 }

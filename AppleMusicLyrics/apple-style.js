@@ -1,8 +1,6 @@
 /**
- * Minified by jsDelivr using Terser v5.48.0.
- * Original file: /npm/@uimaxbai/am-lyrics@1.5.4/dist/src/am-lyrics.js
- *
- * Do NOT use SRI with dynamically generated files! More information: https://www.jsdelivr.com/using-sri-with-dynamic-files
+ * Apple Style Synced Lyrics Component (apple-style.js)
+ * High-performance animated syllable & line synchronization.
  */
 function __decorate(t,e,i,s){var r,n=arguments.length,a=n<3?e:null===s?s=Object.getOwnPropertyDescriptor(e,i):s;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)a=Reflect.decorate(t,e,i,s);else for(var o=t.length-1;o>=0;o--)(r=t[o])&&(a=(n<3?r(a):n>3?r(e,i,a):r(e,i))||a);return n>3&&a&&Object.defineProperty(e,i,a),a}"function"==typeof SuppressedError&&SuppressedError;
 /**
@@ -328,24 +326,14 @@ const o={attribute:!0,type:String,converter:u$1,reflect:!1,hasChanged:f$1},r$1=(
                       >
                         <b style="font-weight: 750;">Songwriters</b> ${this.songwriters}
                       </span>`:""}
-                  <span class="version-info" style="margin-top: 8px;">
-                    <b style="font-weight: 750;">am-lyrics</b> v${"1.5.4"} •
-
-                    <a
-                      href="https://github.com/uimaxbai/apple-music-web-components"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style="display: inline-flex; align-items: center; gap: 4px;"
-                      >Star me on GitHub
-                    </a>
-                  </span>
+                  <span class="version-info"></span>
                 </div>
               </footer>
             `}
       </div>
     `}}AmLyrics.styles=i$3`
     /* ==========================================================================
-       YOULYPLUS-INSPIRED STYLING - Design Tokens & Variables
+       APPLE STYLE STYLING - Design Tokens & Variables
        ========================================================================== */
     :host {
       --lyplus-lyrics-palette: var(

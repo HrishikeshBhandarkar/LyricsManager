@@ -633,7 +633,7 @@
 <input type="file" id="folderInput" webkitdirectory multiple hidden>
 <input type="file" id="lyricsInput" accept=".lrc,.elrc,.txt,.lrcx,.lyrics,.text,text/plain" hidden>
 
-<script src="am-lyrics.js"></script>
+<script src="apple-style.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <script>
 "use strict";
@@ -668,15 +668,18 @@ function syncsafe(b0, b1, b2, b3) { return (b0 << 21) | (b1 << 14) | (b2 << 7) |
 
 function decodeBytes(data, start, end, enc) {
     let encName = "iso-8859-1";
-    let bytes = new Uint8Array(data, start, end - start);
+    let bytes = data.subarray ? data.subarray(start, end) : new Uint8Array(data, start, end - start);
     if (enc === 0) encName = "iso-8859-1";
     else if (enc === 3) encName = "utf-8";
     else if (enc === 1) {
-        if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) { bytes = bytes.slice(2); encName = "utf-16be"; }
-        else if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) { bytes = bytes.slice(2); encName = "utf-16le"; }
+        if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) { bytes = bytes.subarray(2); encName = "utf-16be"; }
+        else if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) { bytes = bytes.subarray(2); encName = "utf-16le"; }
         else encName = "utf-16le";
-    } else encName = "utf-16be";
-    try { return new TextDecoder(encName).decode(bytes); } catch (e) { return ""; }
+    } else if (enc === 2) encName = "utf-16be";
+    try {
+        const str = new TextDecoder(encName).decode(bytes);
+        return str.replace(/\0+$/g, "").replace(/^\0+/g, "").trim();
+    } catch (e) { return ""; }
 }
 
 function termLen(enc) { return (enc === 1 || enc === 2) ? 2 : 1; }
@@ -756,17 +759,17 @@ function parseId3Buffer(buf) {
         if (data.length === 0) continue;
         const enc = data[0];
 
-        if (id === "TIT2" || id === "TT2") meta.title = decodeBytes(data, 1, data.length, enc).trim();
-        else if (id === "TPE1" || id === "TP1") meta.artist = decodeBytes(data, 1, data.length, enc).trim();
-        else if (id === "TALB" || id === "TAL") meta.album = decodeBytes(data, 1, data.length, enc).trim();
+        if (id === "TIT2" || id === "TT2") meta.title = decodeBytes(data, 1, data.length, enc);
+        else if (id === "TPE1" || id === "TP1") meta.artist = decodeBytes(data, 1, data.length, enc);
+        else if (id === "TALB" || id === "TAL") meta.album = decodeBytes(data, 1, data.length, enc);
         else if (id === "USLT" || id === "ULT") {
             const descEnd = findTerm(data, 1 + 3, enc);
-            meta.lyrics = decodeBytes(data, descEnd + termLen(enc), data.length, enc).trim();
+            meta.lyrics = decodeBytes(data, descEnd + termLen(enc), data.length, enc);
         }
         else if (id === "TXXX" || id === "TXX") {
             const descEnd = findTerm(data, 1, enc);
-            const desc = decodeBytes(data, 1, descEnd, enc).trim().toUpperCase();
-            const val = decodeBytes(data, descEnd + termLen(enc), data.length, enc).trim();
+            const desc = decodeBytes(data, 1, descEnd, enc).toUpperCase();
+            const val = decodeBytes(data, descEnd + termLen(enc), data.length, enc);
             if (desc === "LYRICS" || desc === "UNSYNCED LYRICS" || desc === "UNSYNCEDLYRICS") {
                 if (!meta.lyrics) meta.lyrics = val;
             }
@@ -829,9 +832,15 @@ function parseMp4Buffer(buf) {
     const dv = new DataView(buf);
     const textDec = new TextDecoder("utf-8");
 
+    function readFourCC(offset) {
+        if (offset + 4 > dv.byteLength) return "";
+        return String.fromCharCode(dv.getUint8(offset), dv.getUint8(offset+1), dv.getUint8(offset+2), dv.getUint8(offset+3));
+    }
+
     function readString(offset, len) {
         if (offset + len > dv.byteLength) return "";
-        return textDec.decode(new Uint8Array(buf, offset, len));
+        const str = textDec.decode(new Uint8Array(buf, offset, len));
+        return str.replace(/\0+$/g, "").replace(/^\0+/g, "").trim();
     }
 
     function parseIlst(ilstOffset, ilstSize) {
@@ -841,13 +850,13 @@ function parseMp4Buffer(buf) {
         while (p + 8 <= ilstEnd) {
             const atomSize = dv.getUint32(p);
             if (atomSize < 8) break;
-            const atomType = readString(p + 4, 4);
+            const atomType = readFourCC(p + 4);
             const atomEnd = Math.min(p + atomSize, ilstEnd);
 
             let dp = p + 8;
             while (dp + 8 <= atomEnd) {
                 const dSize = dv.getUint32(dp);
-                const dType = readString(dp + 4, 4);
+                const dType = readFourCC(dp + 4);
                 if (dSize < 8) break;
                 if (dType === "data" && dp + 16 <= atomEnd) {
                     const flags = dv.getUint32(dp + 8) & 0xFF;
@@ -865,7 +874,7 @@ function parseMp4Buffer(buf) {
                             meta.artType = mime;
                         }
                     } else if (contentLen > 0) {
-                        const val = readString(contentOffset, contentLen).trim();
+                        const val = readString(contentOffset, contentLen);
                         if (atomType === "\xa9nam") meta.title = val;
                         else if (atomType === "\xa9ART" || atomType === "aART") { if (!meta.artist) meta.artist = val; }
                         else if (atomType === "\xa9alb") meta.album = val;
@@ -884,7 +893,7 @@ function parseMp4Buffer(buf) {
         while (p + 8 <= end) {
             const size = dv.getUint32(p);
             if (size < 8) break;
-            const type = readString(p + 4, 4);
+            const type = readFourCC(p + 4);
             const boxEnd = Math.min(p + size, end);
 
             if (type === "ilst") {
@@ -1552,7 +1561,7 @@ function injectShadowCleanup(am) {
             ".lyrics-footer{display:none !important;}" +
             ".lyrics-container{padding-bottom:160px !important; --lyplus-font-size-base: 38px !important; font-size: 38px !important;}" +
             ".lyrics-container:not(.is-unsynced) .lyrics-gap:not(.active){opacity:0 !important;}" +
-            ".lyrics-line.np-done{opacity:0 !important;}" +
+            ".lyrics-line.np-done{opacity:0 !important; pointer-events:none; transition: opacity 0.35s ease !important;}" +
             ".lyrics-line{cursor:pointer !important; user-select:none;}" +
             ".lyrics-line:hover{opacity: 1 !important; filter: brightness(1.22);}" +
             ".lyrics-line:active{transform: scale(0.985);}";
@@ -2034,8 +2043,25 @@ function tick() {
             am.currentTime = nowMs;
             am.__lastT = nowMs;
         }
+        const now = Date.now();
+        if (now - (am.__lastDone || 0) > 150) {
+            am.__lastDone = now;
+            markCompletedLines(am, nowMs);
+        }
     }
     requestAnimationFrame(tick);
+}
+
+function markCompletedLines(am, nowMs) {
+    const root = am.shadowRoot;
+    if (!root) return;
+    const lines = root.querySelectorAll(".lyrics-line:not(.lyrics-gap):not(.lyrics-footer)");
+    for (const l of lines) {
+        const end = parseInt(l.dataset.endTime || "0", 10);
+        if (end > 0) {
+            l.classList.toggle("np-done", nowMs > end);
+        }
+    }
 }
 
 /* ============ EVENTS ============ */

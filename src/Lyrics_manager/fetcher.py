@@ -557,10 +557,10 @@ def _run_ai_fallback_queue(queue, format_mode, save_choice: str = "3"):
         return
         
     try:
-        from Lyrics_manager.config import get_whisper_model_size
-        model_size = get_whisper_model_size()
+        from Lyrics_manager.config import prompt_first_time_ai_model
+        model_size = prompt_first_time_ai_model()
     except ImportError:
-        model_size = "large-v2"
+        model_size = "base"
 
     try:
         from Lyrics_manager.embedder import embed_lyrics

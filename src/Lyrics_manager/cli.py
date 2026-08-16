@@ -238,6 +238,11 @@ def interactive_fetch():
     perform_api_fetch(title, artist, format_req, Path.cwd(), save_choice=save_choice)
 
 def interactive_ai():
+    from Lyrics_manager.dependencies import prompt_ai_setup_consent
+    if not prompt_ai_setup_consent():
+        return
+    from Lyrics_manager.config import prompt_first_time_ai_model
+    prompt_first_time_ai_model()
     from Lyrics_manager.scanner import scan
     from Lyrics_manager.selector import selector
     from Lyrics_manager.data4api import get_params
@@ -825,6 +830,8 @@ def ai(audio, transcript, format_req, help):
     from Lyrics_manager.dependencies import prompt_ai_setup_consent
     if not prompt_ai_setup_consent():
         sys.exit(1)
+    from Lyrics_manager.config import prompt_first_time_ai_model
+    prompt_first_time_ai_model()
         
     if not audio:
         raw_audio = Prompt.ask("[bold color(208)]Enter path to audio file[/bold color(208)]")

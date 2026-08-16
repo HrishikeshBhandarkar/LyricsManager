@@ -20,7 +20,49 @@ DEFAULT_PROVIDER_ORDER = ["bini", "kugou", "netease", "qq", "mxm", "pax", "lrc"]
 
 def get_whisper_model_size() -> str:
     config = load_config()
-    return config.get("whisper_model", "large-v2")
+    return config.get("whisper_model", "base")
+
+def prompt_first_time_ai_model() -> str:
+    """
+    If the user runs AI mode for the first time without having configured a model,
+    prompts them with model explanations and recommends the Base model.
+    """
+    config = load_config()
+    if config.get("ai_model_configured"):
+        return config.get("whisper_model", "base")
+        
+    from rich.console import Console
+    from rich.prompt import Prompt
+    from rich.panel import Panel
+    
+    console = Console()
+    
+    info_text = (
+        "[bold white]Which AI Whisper model would you like to use?[/bold white]\n\n"
+        "  [bold color(208)][1] Base Model (Recommended)[/bold color(208)]\n"
+        "      • Instant and enough for day-to-day use for languages like English.\n"
+        "      • Lightweight (~140 MB) and fast inference on both CPU and GPU.\n\n"
+        "  [bold color(208)][2] Large Model (Large-V2)[/bold color(208)]\n"
+        "      • Takes a lot of time and VRAM, but is more precise.\n"
+        "      • Works with other languages, but is still a hit or miss (~1.5 GB)."
+    )
+    
+    console.print()
+    console.print(Panel(info_text, border_style="color(208)", title="[bold white]🤖 First-Time AI Model Selection[/bold white]", title_align="left"))
+    
+    choice = Prompt.ask(
+        "[bold color(208)]Select model [1] Base (Recommended) or [2] Large-V2[/bold color(208)]",
+        choices=["1", "2"],
+        default="1"
+    )
+    
+    chosen_model = "base" if choice == "1" else "large-v2"
+    config["whisper_model"] = chosen_model
+    config["ai_model_configured"] = True
+    save_config(config)
+    
+    console.print(f"[bold green]✔ Saved '{chosen_model}' as your preferred AI model! (Change anytime via /config)[/bold green]\n")
+    return chosen_model
 
 def get_preferred_provider() -> str:
     config = load_config()
